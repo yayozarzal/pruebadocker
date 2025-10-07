@@ -72,6 +72,9 @@ jobs:
             DEPLOY_PATH="/home/${{ secrets.SSH_USER }}/deploy"
             cd $DEPLOY_PATH
 
+            #detener y limpiar servicios anteriores
+            sudo docker-compose down
+
             #Descargar la imagen mas reciente de docker hub
             echo ${{secrets.DOCKER_PASSWORD}} | sudo docker login -u ${{secrets.DOCKER_USER}} --password-stdin
 
