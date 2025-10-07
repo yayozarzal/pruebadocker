@@ -18,4 +18,63 @@ jobs:
         run: docker build -t ${{ secrets.DOCKER_USER }}/dockeractions:latest .
       - name: Publicar la imagen en Docker Hub
         run: docker push ${{ secrets.DOCKER_USER }}/dockeractions:latest
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codigo (obtener docker-compose.yml, setup_vm.sh)
+        uses: actions/checkout@v5
 
+      - name: Configurar agente SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+        # 2 copiar script de configuracion a la VM de OCI
+      - name: Copiar script de configuracion a la VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "setup_vm.sh" # archivo local
+          target: "~/tmp/" # carpeta destino en la VM
+
+        # 3 ejecutar script de configuracion en la VM de OCI
+      - name: Ejecutar script de instalacion de docker en la vm
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            chmod +x ~/tmp/setup_vm.sh 
+            ~/tmp/setup_vm.sh ${{secrets.SSH_USER}}
+            rm /tmp/stup_vm.sh 
+        #4 copiar docker-compose.yml a la VM
+      - name: Copiar docker-compose.yml a la VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml" # archivo local
+          target: "/home/${{ secrets.SSH_USER }}/deploy/" # carpeta destino en la VM
+        
+          # 5 ejecutar docker-compose en la VM de OCI
+      - name: Ejecutar docker-compose en la VM
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            DEPLOY_PATH="/home/${{ secrets.SSH_USER }}/deploy"
+            cd $DEPLOY_PATH
+
+            #Descargar la imagen mas reciente de docker hub
+            echo ${{secrets.DOCKER_PASSWORD}} | sudo docker login -u ${{secrets.DOCKER_USER}} --password-stdin
+
+            sudo docker-compose pull
+            sudo docker-compose up -d --force-recreate
+            sudo docker logout
