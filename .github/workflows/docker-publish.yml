@@ -81,3 +81,17 @@ jobs:
             sudo docker-compose pull
             sudo docker-compose up -d --force-recreate
             sudo docker logout
+
+      #6 enviar correo de confirmacion
+      - name: Enviar correo de confirmacion
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Despliegue Completo"
+          body: "La nueva version de la aplicacion ha sido desplegada correctamente."
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_USER }}
+          secure: true
