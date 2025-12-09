@@ -38,7 +38,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "setup_vm.sh" # archivo local
-          target: "/tmp/" # carpeta destino en la VM
+          target: "/tmp/setup_vm.sh" # carpeta destino en la VM
 
         # 3 ejecutar script de configuracion en la VM de OCI
       - name: Ejecutar script de instalacion de docker en la vm
